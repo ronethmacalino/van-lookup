@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vehicle Assignment Lookup</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .logo {
+      max-width: 200px;
+      margin-bottom: 20px;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab-button {
+      flex: 1;
+      padding: 10px;
+      cursor: pointer;
+      background-color: #f0f0f0;
+      border: none;
+      outline: none;
+    }
+    .tab-button.active {
+      background-color: #20531c;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    input, button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <img src="./C.png" alt="Logo" class="logo" />
+  <h2>Vehicle Assignment Lookup</h2>
+
+  <div class="tabs" id="tabButtons"></div>
+
+  <div id="tabContents"></div>
+
+  <script>
+    const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRzr6a_ShEYQFXRD_I43rCUHh41IbNeU1SvNnZ50fBfizcck02YxUrwMztGRjIZrR4tneiVz3wwM6XR/pub?output=csv&single=true&sheet=';
+    const SHEET_NAMES = ["Day 1", "Day 2", "Day 3"];
+    const allData = {};
+
+    function normalize(name) {
+      return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    async function loadSheet(sheetName) {
+      const response = await fetch(SHEET_URL + encodeURIComponent(sheetName));
+      const text = await response.text();
+      const rows = text.trim().split('\n').map(row => row.split(','));
+      const headers = rows[0];
+
+      allData[sheetName] = {};
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const rowData = {};
+        headers.forEach((h, j) => rowData[h.trim()] = row[j]?.trim());
+        const key = normalize(rowData["Name"]);
+        allData[sheetName][key] = rowData;
+      }
+    }
+
+    function createTabs() {
+      const tabButtons = document.getElementById("tabButtons");
+      const tabContents = document.getElementById("tabContents");
+
+      SHEET_NAMES.forEach((name, index) => {
+        // Button
+        const btn = document.createElement("button");
+        btn.className = "tab-button" + (index === 0 ? " active" : "");
+        btn.textContent = name;
+        btn.onclick = () => showTab(name);
+        tabButtons.appendChild(btn);
+
+        // Content
+        const div = document.createElement("div");
+        div.className = "tab-content" + (index === 0 ? " active" : "");
+        div.id = `tab-${name}`;
+        div.innerHTML = `
+          <input type="text" id="input-${name}" placeholder="Enter your name" />
+          <button onclick="lookup('${name}')">Find Vehicle</button>
+          <div id="result-${name}" class="result">Ready to search.</div>
+        `;
+        tabContents.appendChild(div);
+      });
+    }
+
+    function showTab(name) {
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(div => {
+        div.classList.toggle('active', div.id === `tab-${name}`);
+      });
+    }
+
+    function lookup(sheetName) {
+      const input = document.getElementById(`input-${sheetName}`).value;
+      const normalized = normalize(input);
+      const data = allData[sheetName];
+      const resultDiv = document.getElementById(`result-${sheetName}`);
+
+      const matchedKey = Object.keys(data).find(k => k.includes(normalized));
+
+      if (matchedKey) {
+        const info = data[matchedKey];
+        resultDiv.innerHTML = `
+          <p><strong>Vehicle:</strong> ${info["Vehicle Plate"] || "-"} (${info["Vehicle Model"] || ""})</p>
+          <p><strong>Driver:</strong> ${info["Driver"] || "-"} (${info["Contact Number"] || ""})</p>
+          <p><strong>Van Leader:</strong> ${info["Van Leader"] || "-"}</p>
+        `;
+      } else {
+        resultDiv.textContent = `No vehicle found for "${input}".`;
+      }
+    }
+
+    async function init() {
+      createTabs();
+      for (const name of SHEET_NAMES) {
+        await loadSheet(name);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
