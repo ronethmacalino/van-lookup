@@ -104,14 +104,23 @@
     }
 
     function findVehicle(day, resultId, inputId) {
-      const input = document.getElementById(inputId).value;
+      const input = document.getElementById(inputId).value.trim();
       const normalized = normalize(input);
       const dataSet = vehicleData[day];
-
       const resultDiv = document.getElementById(resultId);
-      let foundKey = Object.keys(dataSet).find(k =>
-        k.includes(normalized) || normalized.includes(k)
-      );
+
+      if (!input) {
+        resultDiv.textContent = "Please enter a name.";
+        return;
+      }
+
+      let foundKey = Object.keys(dataSet).find(k => k === normalized);
+
+      if (!foundKey) {
+        foundKey = Object.keys(dataSet).find(k =>
+          k.includes(normalized) || normalized.includes(k)
+        );
+      }
 
       if (foundKey) {
         const entry = dataSet[foundKey];
@@ -119,7 +128,14 @@
                                Driver: ${entry["Driver and Contact Number"] || "N/A"}<br>
                                Van Leader: ${entry["Van Leader"] || "N/A"}`;
       } else {
-        resultDiv.textContent = `No assignment found for "${input}".`;
+        const suggestions = Object.keys(dataSet)
+          .filter(k => k.includes(normalized.split(" ")[0]))
+          .slice(0, 3)
+          .map(k => `<li>${dataSet[k].Name}</li>`)
+          .join("");
+
+        resultDiv.innerHTML = `No assignment found for "${input}".<br>` +
+                              (suggestions ? `Did you mean:<ul>${suggestions}</ul>` : "");
       }
     }
 
