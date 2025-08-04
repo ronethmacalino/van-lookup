@@ -50,7 +50,7 @@
 </head>
 <body>
 
-  <img src="./C.png" alt="Logo" class="logo" />
+  <img src="C.png" alt="Logo" class="logo" />
   <h2>Vehicle Assignment Lookup</h2>
 
   <div class="tabs">
@@ -85,7 +85,7 @@
     const vehicleData = {};
 
     function normalize(str) {
-      return str.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+      return str.toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
     async function loadVehicleData() {
@@ -95,8 +95,8 @@
       ["August 14", "August 15", "August 16", "August 17"].forEach(day => {
         vehicleData[day] = {};
         data[day].forEach(entry => {
-          if (entry.Name) {
-            vehicleData[day][normalize(entry.Name)] = entry;
+          if (entry["Employee Name"]) {
+            vehicleData[day][normalize(entry["Employee Name"])] = entry;
           }
         });
         document.getElementById(`result${day.slice(-2)}`).textContent = "Ready to search.";
@@ -114,24 +114,25 @@
         return;
       }
 
-      let foundKey = Object.keys(dataSet).find(k => k === normalized);
+      let foundKey = Object.keys(dataSet).find(k => normalize(k) === normalized);
 
       if (!foundKey) {
-        foundKey = Object.keys(dataSet).find(k =>
-          k.includes(normalized) || normalized.includes(k)
-        );
+        foundKey = Object.keys(dataSet).find(k => {
+          const originalName = normalize(k);
+          return originalName.includes(normalized) || normalized.includes(originalName);
+        });
       }
 
       if (foundKey) {
         const entry = dataSet[foundKey];
-        resultDiv.innerHTML = `Plate & Model: ${entry["Vehicle Plate and Model"] || "N/A"}<br>
-                               Driver: ${entry["Driver and Contact Number"] || "N/A"}<br>
-                               Van Leader: ${entry["Van Leader"] || "N/A"}`;
+        resultDiv.innerHTML = `Plate & Model: ${entry["Van Plate Number"] || "N/A"} ${entry["Van Model"] || ""}<br>
+                               Driver: ${entry["Van Driver"] || "N/A"} (${entry["Driver Number"] || "N/A"})<br>
+                               Van Leader: ${entry["Van POC"] || "N/A"}`;
       } else {
         const suggestions = Object.keys(dataSet)
           .filter(k => k.includes(normalized.split(" ")[0]))
           .slice(0, 3)
-          .map(k => `<li>${dataSet[k].Name}</li>`)
+          .map(k => `<li>${dataSet[k]["Employee Name"]}</li>`)
           .join("");
 
         resultDiv.innerHTML = `No assignment found for "${input}".<br>` +
